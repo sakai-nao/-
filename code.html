@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>シンプルオセロ</title>
+  <style>
+    /* ------ レイアウト ------ */
+    body {
+      font-family: system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      margin: 0;
+      padding: 1rem;
+      background: #f5f5f5;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(8, 50px);
+      grid-template-rows: repeat(8, 50px);
+      border: 4px solid #2e7d32;
+      background: #388e3c;
+    }
+
+    .cell {
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+    }
+
+    .stone {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+
+    .black { background: #000; }
+    .white { background: #fff; }
+  </style>
+</head>
+<body>
+  <h1>シンプルオセロ</h1>
+  <div id="board"></div>
+
+  <script>
+    /*********************
+     * 定数と状態変数
+     *********************/
+    const SIZE = 8;               // ボードの行列数
+    const EMPTY = 0, BLACK = 1, WHITE = 2;
+
+    // 8方向ベクトル
+    const DIR = [
+      [-1, -1], [-1, 0], [-1, 1],
+      [0, -1],          [0, 1],
+      [1, -1],  [1, 0], [1, 1],
+    ];
+
+    // 盤面 2D 配列を作成
+    const board = Array.from({ length: SIZE }, () => Array(SIZE).fill(EMPTY));
+
+    // 初期配置
+    board[3][3] = WHITE;
+    board[3][4] = BLACK;
+    board[4][3] = BLACK;
+    board[4][4] = WHITE;
+
+    let currentPlayer = BLACK; // 黒から開始
+
+    /*********************
+     * DOM生成
+     *********************/
+    const boardEl = document.getElementById("board");
+
+    // セルを生成しクリックリスナーを付与
+    function renderBoard() {
+      boardEl.innerHTML = ""; // クリア
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.r = r;
+          cell.dataset.c = c;
+
+          const stoneVal = board[r][c];
+          if (stoneVal !== EMPTY) {
+            const stone = document.createElement("div");
+            stone.className = `stone ${stoneVal === BLACK ? "black" : "white"}`;
+            cell.appendChild(stone);
+          }
+
+          cell.addEventListener("click", handleMove);
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    /*********************
+     * ゲームロジック
+     *********************/
+    function handleMove(e) {
+      const r = +e.currentTarget.dataset.r;
+      const c = +e.currentTarget.dataset.c;
+
+      if (board[r][c] !== EMPTY) return; // 置けない
+
+      const flipped = getFlippedStones(r, c, currentPlayer);
+      if (flipped.length === 0) return; // 挟めない
+
+      // 石を配置
+      board[r][c] = currentPlayer;
+      // 反転処理
+      flipped.forEach(([fr, fc]) => (board[fr][fc] = currentPlayer));
+
+      // プレイヤー交代
+      currentPlayer = opponent(currentPlayer);
+      renderBoard();
+    }
+
+    // 反転できる石リストを取得
+    function getFlippedStones(r, c, player) {
+      const result = [];
+      DIR.forEach(([dr, dc]) => {
+        const line = [];
+        let nr = r + dr,
+          nc = c + dc;
+        while (onBoard(nr, nc) && board[nr][nc] === opponent(player)) {
+          line.push([nr, nc]);
+          nr += dr;
+          nc += dc;
+        }
+        if (onBoard(nr, nc) && board[nr][nc] === player) {
+          result.push(...line); // 挟めた
+        }
+      });
+      return result;
+    }
+
+    function onBoard(r, c) {
+      return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
+    }
+
+    function opponent(p) {
+      return p === BLACK ? WHITE : BLACK;
+    }
+
+    // 初回描画
+    renderBoard();
+  </script>
+</body>
+</html>
